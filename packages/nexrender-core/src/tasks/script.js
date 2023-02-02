@@ -302,7 +302,7 @@ const wrapEnhancedScript = ({ dest, src, parameters = [], keyword, defaults,  /*
     EnhancedScript.prototype.stripCommentsFromScript = function (script)             {
         // https://levelup.gitconnected.com/advanced-regex-find-and-remove-multi-line-comments-in-your-code-c162ba6e5811
         return script
-            .replace(/\n/g, " ")
+            .replace(/(\r\n|\r|\n)/g, " ")
             .replace(/\/\*.*?\*\//g, " ")
             .replace(/\s+/g, " ")
             .trim();
