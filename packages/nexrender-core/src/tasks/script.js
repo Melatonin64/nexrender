@@ -1,10 +1,27 @@
 const fs     = require('fs')
 const path   = require('path')
 const script = require('../assets/nexrender.jsx')
-const matchAll = require('match-all')
+const origMatchAll = require('match-all')
 const { checkForWSL } = require('../helpers/path')
 
 /* helpers */
+const matchAll = function() {
+    const origRetVal = origMatchAll.apply(null, arguments);
+    return {
+        ...origMatchAll,
+        toArray: () => {
+            let res = [];
+            let c = null;
+
+            while (c = origRetVal.nextRaw()) {
+                res.push(c);
+            }
+
+            return res;
+        }
+    }
+}
+
 const escape = str => {
     str = JSON.stringify(str)
     str = str.substring(1, str.length-1)
@@ -286,7 +303,7 @@ const wrapEnhancedScript = ({ dest, src, parameters = [], keyword, defaults,  /*
         // https://levelup.gitconnected.com/advanced-regex-find-and-remove-multi-line-comments-in-your-code-c162ba6e5811
         return script
             .replace(/\n/g, " ")
-            .replace(/\/\*.*\*\//g, " ")
+            .replace(/\/\*.*?\*\//g, " ")
             .replace(/\s+/g, " ")
             .trim();
     }
