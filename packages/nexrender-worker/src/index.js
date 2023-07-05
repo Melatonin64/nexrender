@@ -3,6 +3,8 @@ const { init, render } = require('@nexrender/core')
 const { getRenderingStatus } = require('@nexrender/types/job')
 
 const NEXRENDER_API_POLLING = process.env.NEXRENDER_API_POLLING || 30 * 1000;
+const NEXRENDER_TOLERATE_EMPTY_QUEUES = process.env.NEXRENDER_TOLERATE_EMPTY_QUEUES;
+var emptyReturns = 0;
 
 /* TODO: possibly add support for graceful shutdown */
 let active = true;
@@ -20,8 +22,14 @@ const nextJob = async (client, settings) => {
             );
 
             if (job && job.uid) {
+                emptyReturns = 0;
                 return job
+            } else {
+                // no job was returned by the server. If enough checks have passed, and the exit option is set, deactivate the worker
+                emptyReturns++;
+                if (settings.exitOnEmptyQueue && emptyReturns > settings.tolerateEmptyQueues) active = false;
             }
+
         } catch (err) {
             if (settings.stopOnError) {
                 throw err;
@@ -32,7 +40,7 @@ const nextJob = async (client, settings) => {
             }
         }
 
-        await delay(settings.polling || NEXRENDER_API_POLLING)
+        if (active) await delay(settings.polling || NEXRENDER_API_POLLING)
     } while (active)
 }
 
@@ -45,21 +53,46 @@ const nextJob = async (client, settings) => {
  * @return {Promise}
  */
 const start = async (host, secret, settings, headers) => {
-    settings = init(Object.assign({}, settings, {
+    settings = init(Object.assign({ process: 'nexrender-worker' }, settings, {
         logger: console,
     }))
+
+    settings.logger.log('starting nexrender-worker with following settings:')
+    Object.keys(settings).forEach(key => {
+        settings.logger.log(` - ${key}: ${settings[key]}`)
+    })
 
     if (typeof settings.tagSelector == 'string') {
         settings.tagSelector = settings.tagSelector.replace(/[^a-z0-9, ]/gi, '')
     }
+    // if there is no setting for how many empty queues to tolerate, make one from the
+    // environment variable, or the default (which is zero)
+    if (!(typeof settings.tolerateEmptyQueues == 'number')) {
+        settings.tolerateEmptyQueues = NEXRENDER_TOLERATE_EMPTY_QUEUES;
+    }
 
     const client = createClient({ host, secret, headers });
 
+    settings.track('Worker Started', {
+        worker_tags_set: !!settings.tagSelector,
+        worker_setting_tolerate_empty_queues: settings.tolerateEmptyQueues,
+        worker_setting_exit_on_empty_queue: settings.exitOnEmptyQueue,
+        worker_setting_polling: settings.polling,
+        worker_setting_stop_on_error: settings.stopOnError,
+    })
+
     do {
-        let job = await nextJob(client, settings); {
-            job.state = 'started';
-            job.startedAt = new Date()
-        }
+        let job = await nextJob(client, settings);
+
+        // if the worker has been deactivated, exit this loop
+        if (!active) break;
+
+        settings.track('Worker Job Started', {
+            job_id: job.uid, // anonymized internally
+        })
+
+        job.state = 'started';
+        job.startedAt = new Date()
 
         try {
             await client.updateJob(job.uid, job)
@@ -73,7 +106,11 @@ const start = async (host, secret, settings, headers) => {
             job.onRenderProgress = (job) => {
                 try {
                     /* send render progress to our server */
-                    client.updateJob(job.uid, getRenderingStatus(job))
+                    client.updateJob(job.uid, getRenderingStatus(job));
+
+                    if (settings.onRenderProgress) {
+                        settings.onRenderProgress(job);
+                    }
                 } catch (err) {
                     if (settings.stopOnError) {
                         throw err;
@@ -87,6 +124,10 @@ const start = async (host, secret, settings, headers) => {
 
             job.onRenderError = (job, err /* on render error */) => {
                 job.error = [].concat(job.error || [], [err.toString()]);
+
+                if (settings.onRenderError) {
+                    settings.onRenderError(job, err);
+                }
             }
 
             job = await render(job, settings); {
@@ -94,11 +135,15 @@ const start = async (host, secret, settings, headers) => {
                 job.finishedAt = new Date()
             }
 
+            settings.track('Worker Job Finished', { job_id: job.uid })
+
             await client.updateJob(job.uid, getRenderingStatus(job))
         } catch (err) {
             job.error = [].concat(job.error || [], [err.toString()]);
             job.errorAt = new Date();
             job.state = 'error';
+
+            settings.track('Worker Job Error', { job_id: job.uid })
 
             await client.updateJob(job.uid, getRenderingStatus(job)).catch((err) => {
                 if (settings.stopOnError) {

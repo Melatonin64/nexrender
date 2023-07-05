@@ -1,13 +1,16 @@
 {
   "name": "@nexrender/core",
-  "version": "1.42.2",
+  "version": "1.44.1",
   "main": "src/index.js",
   "author": "Inlife",
+  "homepage": "https://github.com/inlife/nexrender",
+  "bugs": "https://github.com/inlife/nexrender/issues",
+  "repository": "https://github.com/inlife/nexrender.git",
   "scripts": {
     "pkg-prelink": "node ../../misc/prelink.js"
   },
   "dependencies": {
-    "@nexrender/types": "^1.42.2",
+    "@nexrender/types": "^1.44.1",
     "data-uri-to-buffer": "^3.0.0",
     "file-uri-to-path": "^2.0.0",
     "is-wsl": "^2.2.0",
@@ -15,8 +18,11 @@
     "match-all": "^1.2.5",
     "mime-types": "^2.1.29",
     "mkdirp": "^1.0.4",
+    "nanoid": "^3.2.0",
+    "posthog-node": "^3.1.1",
     "requireg": "^0.2.1",
-    "rimraf": "^3.0.2"
+    "rimraf": "^3.0.2",
+    "systeminformation": "^5.18.3"
   },
   "peerDependencies": {
     "@nexrender/action-copy": "^1.0.0",
