@@ -150,6 +150,8 @@ and that have basic knowledge of `javascript` language and `json` formats.
 Probably the closest (feature-wise) alternative that exists at the moment is the Dataclay's [Templater](http://dataclay.com/) bot edition.
 Compared to nexrender it has a rich GUI support and a number of enterprise-scale features, however, it is not free.
 
+Another noteworthy mention is [Plainly](https://plainlyvideos.com/), guys created a great amazing automated platform and actually used nexrender as the backend.
+
 # Installation
 
 You can download binaries directly from the [releases](https://github.com/inlife/nexrender/releases) section,
@@ -1470,6 +1472,7 @@ Here you can find a list of packages published by other contributors:
 * [pulsedemon/nexrender-action-run-command](https://github.com/pulsedemon/nexrender-action-run-command) - Run shell commands as a nexrender action
 * [oksr/nexrender-action-slack-message](https://github.com/oksr/nexrender-action-slack-message) - Utility module for sending a Slack message when render start/finish or render error.
 * [vonstring/nexrender-action-mogrt-template](https://github.com/vonstring/nexrender-action-mogrt-template) - Added .mogrt support to Nexrender
+* [sumitgohil/nexrender-action-webhook](https://github.com/sumitgohil/nexrender-action-webhook) - Call a WebHook url once the project completion has been done. 
 * [somename/package-name](#) - a nice description of a nice package doing nice things
 
 Since nexrender allows to use external packages installed globally from npm, its quite easy to add your own modules
