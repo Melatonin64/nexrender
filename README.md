@@ -494,6 +494,7 @@ Second one is responsible for mainly job-related operations of the full cycle: d
 * `debug` - boolean, enables or disables debug mode, false by default
 * `skipCleanup` - boolean, providing true will prevent nexrender from removing the temp folder with project (false by default)
 * `skipRender` - boolean, providing true will prevent nexrender from running actual rendering, might be useful if you only want to call scripts
+* `skipSteps` - array of strings, render steps to skip during execution. For example pass ["script", "dorender"] to disable running aerender altogether (empty array by default)
 * `multiFrames` - boolean, providing true will attmpt to use aerender's built-in feature of multi frame rendering (false by default)
 * `multiFramesCPU` - integer between 1-100, the percentage of CPU used by multi frame rendering, if enabled (90 by default)
 * `reuse` - boolean, false by default, (from Adobe site): Reuse the currently running instance of After Effects (if found) to perform the render. When an already running instance is used, aerender saves preferences to disk when rendering has completed, but does not quit After Effects. If this argument is not used, aerender starts a new instance of After Effects, even if one is already running. It quits that instance when rendering has completed, and does not save preferences.

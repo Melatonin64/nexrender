@@ -77,6 +77,7 @@ const init = (settings) => {
         forceCommandLinePatch: false,
         skipCleanup: false,
         skipRender: false,
+        skipSteps: [],
         stopOnError: true,
 
         debug: false,
