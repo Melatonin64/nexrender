@@ -5,7 +5,6 @@ const crypto       = require('crypto')
 
 const si           = require('systeminformation')
 const { nanoid }   = require('nanoid')
-const {PostHog}    = require('posthog-node')
 const childProcess = require('child_process')
 
 const { version }  = require('../../package.json')
@@ -15,13 +14,6 @@ const hash = (data, salt) => crypto
     .update(data)
     .digest('hex');
 
-const analyticsPublicKey = 'phc_AWcZMlCOqHJiFyFKSoxT9WSrRkdKDFxpiFn8Ww0ZMHu';
-const analytics = new PostHog(analyticsPublicKey, {
-    host: 'https://eu.posthog.com',
-    flushAt: 1,
-    flushInterval: 0,
-    disableGeoip: true,
-});
 
 /**
  * A helper function to force syncronous tracking
@@ -32,7 +24,7 @@ const analytics = new PostHog(analyticsPublicKey, {
  */
 const forceSyncRequest = (settings, event, properties) => {
     const args = JSON.stringify({settings, event, properties})
-    const proc = childProcess.fork(__filename, ['child', args], {
+    childProcess.fork(__filename, ['child', args], {
         stdio: 'ignore',
     })
 }
@@ -51,7 +43,7 @@ let cache = {
  * @param {*} properties
  * @returns {Promise<void>}
  */
-const track = async (settings, event, properties = {}, isRemote) => {
+const track = async (settings, event, properties = {}) => {
     // if (isRemote) console.log('tracking', event, properties, settings)
 
     if (settings.noAnalytics === true) return;
@@ -186,13 +178,16 @@ const track = async (settings, event, properties = {}, isRemote) => {
 
     // console.log('tracking event:', params)
 
-    analytics.capture(params);
-    await analytics.flush();
+
+    // removed posthog for now
+    params.foo = 1;
+    // analytics.capture(params);
+    // await analytics.flush();
 }
 
 if (process.argv[2] === 'child') {
     const args = JSON.parse(process.argv[3])
-    track(args.settings, args.event, args.properties, true)
+    track(args.settings, args.event, args.properties)
         .then(() => {})
 }
 
