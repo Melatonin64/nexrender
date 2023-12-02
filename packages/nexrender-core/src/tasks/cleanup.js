@@ -1,10 +1,10 @@
-const rimraf = require('rimraf')
+const { rimraf } = require('rimraf')
 const path = require('path')
 
 /**
  * Clean up all workpath files and remove folder
  */
-module.exports = function(job, settings) {
+module.exports = async function(job, settings) {
     settings.track('Job Cleanup');
 
     if (settings.skipCleanup) {
@@ -12,23 +12,19 @@ module.exports = function(job, settings) {
         return Promise.resolve(job)
     }
 
-    return new Promise((resolve) => {
-        settings.logger.log(`[${job.uid}] cleaning up...`);
+    settings.logger.log(`[${job.uid}] cleaning up...`);
 
-        // sometimes this attribute (workpath) is undefined
-        if (!job.workpath) {
-            job.workpath = path.join(settings.workpath, job.uid)
-        }
+    // sometimes this attribute (workpath) is undefined
+    if (!job.workpath) {
+        job.workpath = path.join(settings.workpath, job.uid)
+    }
 
-        rimraf(job.workpath, {glob: false}, (err) => {
-            if (!err) {
-                settings.logger.log(`[${job.uid}] Temporary AfterEffects project deleted. If you want to inspect it for debugging, use "--skip-cleanup"`)
-            } else {
-                settings.logger.log(`[${job.uid}] Temporary AfterEffects could not be deleted. (Error: ${err.code}). Please delete the folder manually: ${job.workpath}`)
-            }
+    try {
+        await rimraf(job.workpath, {glob: false});
+        settings.logger.log(`[${job.uid}] Temporary AfterEffects project deleted. If you want to inspect it for debugging, use "--skip-cleanup"`)
+    } catch (err) {
+        settings.logger.log(`[${job.uid}] Temporary AfterEffects could not be deleted. (Error: ${err.code}). Please delete the folder manually: ${job.workpath}`)
+    }
 
-            resolve(job)
-        })
-    })
+    return job;
 };
-
