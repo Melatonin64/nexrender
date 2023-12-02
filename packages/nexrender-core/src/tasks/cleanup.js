@@ -21,10 +21,15 @@ module.exports = async function(job, settings) {
 
     try {
         await fse.emptyDir(job.workpath);
-        await fse.remove(job.workpath);
+
+        // If we've deleted the contents of the folder successfully,
+        // removing the folder itself may throw error but we treat it as success in any case.
+        try {
+            await fse.remove(job.workpath);
+        } catch { /* empty */ }
         settings.logger.log(`[${job.uid}] Temporary AfterEffects project deleted. If you want to inspect it for debugging, use "--skip-cleanup"`)
     } catch (err) {
-        settings.logger.log(`[${job.uid}] Temporary AfterEffects could not be deleted. (Error: ${err.code}). Please delete the folder manually: ${job.workpath}\n${err}`)
+        settings.logger.log(`[${job.uid}] [fse] Temporary AfterEffects could not be deleted. (Error: ${err.code}). Please delete the folder manually: ${job.workpath}\n${err}`)
     }
 
     return job;
