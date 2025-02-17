@@ -30,11 +30,19 @@ if (process.env.NEXRENDER_REQUIRE_PLUGINS) {
     require('@nexrender/action-copy');
     require('@nexrender/action-encode');
     require('@nexrender/action-upload');
+    require('@nexrender/action-decompress');
+    require('@nexrender/action-image');
+    require('@nexrender/action-fonts');
+    require('@nexrender/action-link');
+    require('@nexrender/action-webhook');
+    require('@nexrender/action-mogrt');
+    require('@nexrender/action-cache');
 
     require('@nexrender/provider-s3');
     require('@nexrender/provider-ftp');
     require('@nexrender/provider-gs');
     require('@nexrender/provider-sftp');
+    require('@nexrender/provider-nx');
 }
 
 const init = (settings) => {
@@ -84,10 +92,15 @@ const init = (settings) => {
         multiFrames: false,
         multiFramesCPU: 90,
         maxMemoryPercent: undefined,
+        maxRenderTimeout: 0,
         imageCachePercent: undefined,
         wslMap: undefined,
 
         onInstanceSpawn: undefined,
+
+        // amount of seconds before job will be marked as "stuck"
+        maxUpdateTimeout: process.env.NEXRENDER_MAX_UPDATE_TIMEOUT || 60,
+        killAEFXOnRenderTimeout: process.env.NEXRENDER_KILL_AEFX_ON_RENDER_TIMEOUT || false,
 
         __initialized: true,
     }, settings, {
@@ -109,9 +122,7 @@ const init = (settings) => {
     }
 
     // add license helper
-    if (settings.addLicense) {
-        license(settings);
-    }
+    license.add(settings);
 
     // attempt to patch the default
     // Scripts/commandLineRenderer.jsx

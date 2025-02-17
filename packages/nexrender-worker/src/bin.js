@@ -14,6 +14,7 @@ const args = arg({
     '--cleanup':                Boolean,
 
     '--host':                   String,
+    '--name':                   String,
     '--secret':                 String,
 
     '--binary':                 String,
@@ -26,6 +27,9 @@ const args = arg({
     '--stop-on-error':          Boolean,
     '--exit-on-empty-queue':    Boolean,
     '--tolerate-empty-queues':  Number,
+    '--stop-at-time':           String,
+    '--stop-days':              String,
+    '--wait-between-jobs':      Number,
 
     '--skip-cleanup':           Boolean,
     '--skip-render':            Boolean,
@@ -43,12 +47,16 @@ const args = arg({
     '--header':                 [String],
 
     '--aerender-parameter':     [String],
+    '--language':               String,
+
+    '--handle-interruption':     Boolean,
 
     // Aliases
     '-v':           '--version',
     '-t':           '--tag-selector',
     '-c':           '--cleanup',
     '-h':           '--help',
+    '-n':           '--name',
     '-s':           '--secret',
     '-b':           '--binary',
     '-w':           '--workpath',
@@ -86,6 +94,10 @@ if (args['--help']) {
                                             specify which host {cyan nexrender-server} is running at,
                                             and where all api requests will be forwarded to
 
+      -n, --name {underline unique_worker_name}
+                                            specify which name the {cyan nexrender-worker} will have,
+                                            and how it will be identified in the {cyan nexrender-server}
+
       -s, --secret {underline secret_string}            specify a secret that will be required for every
                                             incoming http request to validate again
 
@@ -118,6 +130,14 @@ if (args['--help']) {
                                             been set using --exit-on-empty-queues). Defaults to zero. If specified will be used instead of
                                             NEXRENDER_TOLERATE_EMPTY_QUEUES env variable
 
+    --stop-at-time                          worker will exit at the given time if given.
+                                            example: 5:00 will stop at 5 am local time.
+
+    --stop-days                             comma separated list of weekdays when to stop. Must be used together with --stop-at-time
+                                            0 is sunday, 6 is saturday
+                                            example: --stop-at-time=5:00 stop-days=1,2,3,4,5
+                                            will stop at 5 am but not on weekend
+
     --no-license                            prevents creation of the ae_render_only_node.txt file (enabled by default),
                                             which allows free usage of trial version of Adobe After Effects
 
@@ -134,6 +154,8 @@ if (args['--help']) {
 
     --polling                               amount of miliseconds to wait before checking queued projects from the api,
                                             if specified will be used instead of NEXRENDER_API_POLLING env variable
+
+    --wait-between-jobs                     amount of miliseconds to wait before checking queued projects from the api
 
     --header                                Define custom header that the worker will use to communicate with nexrender-server.
                                             Accepted format follows curl or wget request header definition,
@@ -162,6 +184,8 @@ if (args['--help']) {
                                             enclosed in single quotes. For example:
                                             nexrender --aerender-parameter 'close SAVE_CHANGES' --ae 'i 10' job.json
 
+    --language                              language of local after effects installation. currently only en and de are supported
+
 
   {bold ENV VARS}
 
@@ -171,6 +195,7 @@ if (args['--help']) {
 
       {bold $} NEXRENDER_API_POLLING=1000 {cyan nexrender-worker}
 `);
+
     process.exit(2);
 }
 
@@ -199,6 +224,7 @@ if (settings.hasOwnProperty('ae-params')) {
     settings['aeParams'] = settings['ae-params']
 }
 
+opt('name',                 '--name');
 opt('binary',               '--binary');
 opt('workpath',             '--workpath');
 opt('no-license',           '--no-license');
@@ -212,12 +238,17 @@ opt('reuse',                '--reuse');
 opt('stopOnError',          '--stop-on-error');
 opt('tolerateEmptyQueues',  '--tolerate-empty-queues');
 opt('exitOnEmptyQueue',     '--exit-on-empty-queue');
+opt('stopAtTime',           '--stop-at-time');
+opt('stopDays',             '--stop-days');
+opt('waitBetweenJobs',      '--wait-between-jobs');
 opt('maxMemoryPercent',     '--max-memory-percent');
 opt('imageCachePercent',    '--image-cache-percent');
 opt('polling',              '--polling');
 opt('wslMap',               '--wsl-map');
 opt('aeParams',             '--aerender-parameter');
 opt('tagSelector',          '--tag-selector');
+opt('language',             '--language');
+opt('handleInterruption',    '--handle-interruption');
 
 if(args['--cache-path']){
     opt('cache', '--cache-path');
@@ -251,6 +282,9 @@ if (settings['no-license']) {
 } else {
     settings.addLicense = true;
 }
+
+/* debug implies verbose */
+// settings.verbose = settings.debug;
 
 if (settings['no-analytics']) {
     settings.noAnalytics = true;

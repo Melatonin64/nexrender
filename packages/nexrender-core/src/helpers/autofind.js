@@ -19,6 +19,7 @@ const defaultPaths = {
         '/Applications/Adobe After Effects CC 2022',
         '/Applications/Adobe After Effects CC 2023',
         '/Applications/Adobe After Effects CC 2024',
+        '/Applications/Adobe After Effects CC 2025',
     ],
     win32: [
         'C:\\Program Files\\Adobe\\After Effects CC',
@@ -34,7 +35,7 @@ const defaultPaths = {
         'C:\\Program Files\\Adobe\\After Effects 2022\\Support Files',
         'C:\\Program Files\\Adobe\\After Effects 2023\\Support Files',
         'C:\\Program Files\\Adobe\\After Effects 2024\\Support Files',
-
+        'C:\\Program Files\\Adobe\\After Effects 2025\\Support Files',
         'C:\\Program Files\\Adobe\\Adobe After Effects CC',
         'C:\\Program Files\\Adobe\\Adobe After Effects CC\\Support Files',
         'C:\\Program Files\\Adobe\\Adobe After Effects CC 2015\\Support Files',
@@ -48,6 +49,7 @@ const defaultPaths = {
         'C:\\Program Files\\Adobe\\Adobe After Effects 2022\\Support Files',
         'C:\\Program Files\\Adobe\\Adobe After Effects 2023\\Support Files',
         'C:\\Program Files\\Adobe\\Adobe After Effects 2024\\Support Files',
+        'C:\\Program Files\\Adobe\\Adobe After Effects 2025\\Support Files',
     ],
     wsl: [
         '/mnt/c/Program Files/Adobe/After Effects CC',
@@ -63,6 +65,7 @@ const defaultPaths = {
         '/mnt/c/Program Files/Adobe/After Effects 2022/Support Files',
         '/mnt/c/Program Files/Adobe/After Effects 2023/Support Files',
         '/mnt/c/Program Files/Adobe/After Effects 2024/Support Files',
+        '/mnt/c/Program Files/Adobe/After Effects 2025/Support Files',
 
         '/mnt/c/Program Files/Adobe/Adobe After Effects CC',
         '/mnt/c/Program Files/Adobe/Adobe After Effects CC/Support Files',
@@ -77,16 +80,12 @@ const defaultPaths = {
         '/mnt/c/Program Files/Adobe/Adobe After Effects 2022/Support Files',
         '/mnt/c/Program Files/Adobe/Adobe After Effects 2023/Support Files',
         '/mnt/c/Program Files/Adobe/Adobe After Effects 2024/Support Files',
+        '/mnt/c/Program Files/Adobe/Adobe After Effects 2025/Support Files',
     ],
 }
 
-/**
- * Attemnt to find a aebinary path automatically
- * (using a table of predefined paths)
- * @param  {Object} settings
- * @return {String|null}
- */
-module.exports = settings => {
+
+const findAll = settings => {
     let platform = os.platform()
 
     if (settings.wsl) platform = 'wsl'
@@ -100,6 +99,21 @@ module.exports = settings => {
         .map(folderPath => path.join(folderPath, binary))
         .filter(binaryPath => fs.existsSync(binaryPath))
 
+    return results
+}
+
+/**
+ * Attemnt to find a aebinary path automatically
+ * (using a table of predefined paths)
+ * @param  {Object} settings
+ * @return {String|null}
+ */
+module.exports = settings => {
+    const results = findAll(settings)
+
     // return first matched result
     return results.length ? results[0] : null;
 }
+
+module.exports.defaultPaths = defaultPaths
+module.exports.findAll = findAll

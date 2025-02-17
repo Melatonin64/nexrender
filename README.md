@@ -117,6 +117,8 @@
     - [Financial Contributors](#financial-contributors)
       - [Individuals](#individuals)
       - [Organizations](#organizations)
+  - [Need a quick solution or help?](#need-a-quick-solution-or-help)
+  - [Showcase your achievements](#showcase-your-achievements)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -124,8 +126,13 @@
 
 `nexrender` is a simple, small, carefully designed application with the main goal of rendering automation for Adobe After Effects based rendering workflows.
 
-At this point in time, the project is mainly targeted at people at least somewhat comfortable with scripting or development,
-and that have basic knowledge of `javascript` language and `json` formats.
+The information in this document is targeted at people at least somewhat comfortable with scripting or development, and who have basic knowledge of javascript language and json formats.
+
+If coding isn’t your thing or you want a quick managed solution, we got you! We offer a range of services to help you get started much faster and hassle-free.
+* [Nexrender Cloud](https://www.nexrender.com/products/cloud) is a ready-to-use SaaS rendering platform created with ease in mind and supplemented with additional features.
+* If you’re looking for something super flexible, tailored specifically to your unique needs, we also build [custom infrastructures](https://www.nexrender.com/products/custom) based on your requirements and integrated with your existing setup.
+* In case, you just need to render something very quickly, let us know too! We offer [batch rendering](https://www.nexrender.com/products/batch) just for such cases.
+
 
 ### Features
 
@@ -148,10 +155,9 @@ and that have basic knowledge of `javascript` language and `json` formats.
 
 ### Alternatives
 
-Probably the closest (feature-wise) alternative that exists at the moment is the Dataclay's [Templater](http://dataclay.com/) bot edition.
-Compared to nexrender it has a rich GUI support and a number of enterprise-scale features, however, it is not free.
+The main alternative to our open-source project is [Nexrender Cloud](https://www.nexrender.com/products/cloud) - our hosted SaaS platform with easy setup, additional features and best price on the market.
 
-Another noteworthy mention is [Plainly](https://plainlyvideos.com/), guys created a great amazing automated platform and actually used nexrender as the backend.
+Among more expensive and less flexible alternatives, there is Plainly, a tool built on **Nexrender** infrastructure that offers cloud rendering. Another noteworthy option currently available is Dataclay's Templater bot edition.
 
 # Installation
 
@@ -168,9 +174,6 @@ npm i -g @nexrender/cli @nexrender/action-copy @nexrender/action-encode ...
 # Usage
 
 We will be using `nexrender-cli` binary for this example. It's recommended to download/install it if you haven't already.
-
-Also, check out these example/tutorial videos made by our community:
-* ["Creating automated music video with nexrender"](https://www.youtube.com/watch?v=E64dXZ_AReQ) by **[douglas prod.](https://www.youtube.com/channel/UCDFTT_oX6VwmANKMng0-NUA)**
 
 >⚠ If using WSL check out [wsl support](#wsl)
 
@@ -211,7 +214,7 @@ Submitting this data to the binary will result in start of the rendering process
 $ nexrender-cli '{"template":{"src":"file:///home/documents/myproject.aep","composition":"main"}}'
 ```
 
-> Note: on MacOS you might need to change the permissions for downloaded file, so it would be considered as an executable.  
+> Note: on MacOS you might need to change the permissions for downloaded file, so it would be considered as an executable.
 > You can do it by running: `$ chmod 755 nexrender-cli-macos`
 
 or more conveniently using the `--file` option
@@ -226,7 +229,7 @@ More info: [@nexrender/cli](packages/nexrender-cli)
 
 #### After Effects 2023
 
-Please not that for After Effects 2023, it's vital to set up an Output Module, even if you want to rely on the default output module. After Effects 2023 rendering binary (aerender) in a lot of cases will not render a composition unless it has a configured output module. Additionally, AE2023 now allows rendering directly to mp4, so consider setting up a custom value for `outputExt` as well. To do that, take a look at following example:
+Please note that for After Effects 2023, it's vital to set up an Output Module, even if you want to rely on the default output module. After Effects 2023 rendering binary (aerender) in a lot of cases will not render a composition unless it has a configured output module. Additionally, AE2023 now allows rendering directly to mp4, so consider setting up a custom value for `outputExt` as well. To do that, take a look at following example:
 
 ```json
 // myjob.json
@@ -309,7 +312,7 @@ The reason is that we haven't defined any actions that we need to do after we fi
 ```
 
 We've just added a `postrender` action, that will occur right after we finished rendering.
-A module that we described in this case, is responsible for copying result file from a temp folder to the `output` folder.
+A module that we described in this case, is responsible for copying the result file from a temp folder to the `output` folder.
 
 There are multiple built-in modules within nexrender ecosystem:
 
@@ -317,9 +320,10 @@ There are multiple built-in modules within nexrender ecosystem:
 * [@nexrender/action-encode](packages/nexrender-action-encode)
 * [@nexrender/action-upload](packages/nexrender-action-upload)
 * [@nexrender/action-cache](packages/nexrender-action-cache)
+* [@nexrender/action-decompress](packages/nexrender-action-decompress)
 * (list will be expanded)
 
-Every module might have his own set of fields, however, `module` field is always there.
+Every module might have its own set of fields, however, `module` field is always there.
 
 Also, you might've noticed that `actions` is an object, however, we described only one (`postrender`) field in it.
 And there are more:
@@ -437,6 +441,10 @@ Job can have state field (`job.state`) be set to one of those values:
  * `render:cleanup`
  * `finished` (when worker successfully finished rendering the job)
  * `error` (when worker got an error at any step starting from `started` state)
+
+If you want to monitor the status of all your running jobs, consider trying our SaaS solution, [Nexrender Cloud](https://www.nexrender.com/products/cloud), which offers enhanced visibility and a range of other cool features. Here is how it looks like:
+
+![Nexrender Cloud Screenshot](https://github.com/user-attachments/assets/4daa7764-7e92-4cab-96a8-7c246c8fbb61)
 
 ## Programmatic
 
@@ -569,11 +577,13 @@ by specifying `src`, and one of the `layerName` or `layerIndex` options.
 * `layerName`: string, target layer name in the After Effects project
 * `layerIndex`: integer, can be used instead of `layerName` to select a layer by providing an index, starting from 1 (default behavior of AE jsx scripting env)
 * `composition`: string, composition where the layer is. Useful for searching layer in specific compositions. If none is provided, it uses the wildcard composition "\*",
-that will result in a wildcard composition matching, and will apply this data to every matching layer in every matching composition. If you want to search in a nested composition you can provide a path to that composition using  `"->"` delimiter.  
+that will result in a wildcard composition matching, and will apply this data to every matching layer in every matching composition. If you want to search in a nested composition you can provide a path to that composition using  `"->"` delimiter.
 For example, `"FULL_HD->intro->logo comp"` matches a composition named `logo comp` that is used in composition `intro` which in turn is used in composition `FULL_HD`. Note, that `FULL_HD` doesn't have to be the root composition. Make sure to specify a **composition** name, not a layer name.
 * `name`: string, an optional filename that the asset will be saved as. If not provided the `layerName` or the basename of the file will be used
 * `extension`: string, an optional extension to be added to the filename before it is sent for rendering. This is because After Effects expects the file extension to match the content type of the file. If none is provided, the filename will be unchanged.
 * `useOriginal`: boolean, an optional feature specific to the `file://` protocol that prevents nexrender from copying an asset to a local temp folder, and use original instead
+* `sequence` : boolean, an optional feature that allows you to specify that the asset is a sequence of images. If set to true, the asset will be treated as a sequence of images and will be imported as such in After Effects. (default: false) For more information on how to use sequences, check out the [Adobe After Effects documentation](https://helpx.adobe.com/after-effects/using/preparing-importing-still-images.html#Importafootageitemsfromasequenceoffiles)
+* `removeOld`: boolean, an optional feature that allows you to specify that the old asset should be removed from the project. If set to true, the old asset will be removed from the project. (default: false). Please note that removing the old asset will remove all instances of the asset from the project, (including all layers it was added to), not just the one that was replaced.
 
 The specified asset from `src` field will be downloaded/copied to the working directory, and just before rendering will happen,
 a footage item with specified `layerName` or `layerIndex` in the original project will be replaced with the freshly downloaded asset.
@@ -607,6 +617,10 @@ This way you (if you are using network rendering) can not only deliver assets to
     ]
 }
 ```
+
+Companies often need to review render results on-the-go to avoid producing videos with misaligned images, fonts, or other errors. Our SaaS solution, [Nexrender Cloud](https://www.nexrender.com/products/cloud), offers this capability. Here's a glimpse of how it works:
+
+![Nexrender Cloud Job Screenshot](https://github.com/user-attachments/assets/42d7345f-230e-40c4-97ae-55605cc81aaa)
 
 ### HTTP caching
 When using the `http` or `https` protocol, you can utilize local caching to minimize the amount of data that have to be transferred over a network and speed up project/assets download. To use HTTP caching, the server serving your assets must support the relevant [HTTP caching semantics](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching).
@@ -700,7 +714,7 @@ To do that, a special asset of type `data` can be used.
 * `value`: mixed, optional, indicates which value you want to be set to a specified property
 * `expression`: string, optional, allows you to specify an expression that can be executed every frame to calculate the value
 * `composition`: string, composition where the layer is, useful for searching layer in specific compositions. If none is provided, it uses the wildcard composition "\*",
-that will result in a wildcard composition matching, and will apply this data to every matching layer in every matching composition. If you want to search in a nested composition you can provide a path to that composition using  `"->"` delimiter.  
+that will result in a wildcard composition matching, and will apply this data to every matching layer in every matching composition. If you want to search in a nested composition you can provide a path to that composition using  `"->"` delimiter.
 For example, `"FULL_HD->intro->logo comp"` matches a composition named `logo comp` that is used in composition `intro` which in turn is used in composition `FULL_HD`. Note, that `FULL_HD` doesn't have to be the root composition. Make sure to specify a **composition** name, not a layer name.
 * `continueOnMissing`: boolean (default false), optional, allows you to bypass an error exception if couldn't find any layers. Probably should not be used by users, unless they know what are they doing.
 
@@ -789,11 +803,11 @@ With some basic knowledge of `ExtendScript Toolkit`, you can write custom script
 
 ### Dynamic Parameters
 
-With dynamic parameters, you can set a parameter in your Job declaration to be used on a JSX Script! 
+With dynamic parameters, you can set a parameter in your Job declaration to be used on a JSX Script!
 
 Each parameter object must have the following:
 * **key** (required)    :   The key of the variable. Example: Key = dog => NX.dog.
-* **value** (required)  :   The target value for the variable. Example: Key = dog, Value = "doggo" => NX.dog = "doggo". See [Supported Parameter Types](#supported-parameter-types). 
+* **value** (required)  :   The target value for the variable. Example: Key = dog, Value = "doggo" => NX.dog = "doggo". See [Supported Parameter Types](#supported-parameter-types).
 
 ### Supported Parameter Types
 
@@ -863,7 +877,7 @@ This is the default value for parameters used on any given JSX script that are n
         }
     ]
 ```
-`NX.get("carDetails")` will be equal to `null`. 
+`NX.get("carDetails")` will be equal to `null`.
 
 
 
@@ -872,11 +886,11 @@ This is the default value for parameters used on any given JSX script that are n
 Functions are useful if you need some dynamic calculation of specific values. You can use them in conjuction with other dynamic parameters as well. Currently we support [Self-invoking Functions](#self-invoking-functions-example), [Named Functions](#named-functions-example) and [Anonymous Functions](#anonymous-functions-example). After Effects ExtendedScript **does not support arrow functions** at the moment (cc 2020).
 
 ##### Warnings
-* You must **only use one function per parameter**; If there's more than one function defined in the parameter `value` the job will crash due to limitations in function detection and parsing. 
+* You must **only use one function per parameter**; If there's more than one function defined in the parameter `value` the job will crash due to limitations in function detection and parsing.
 * Use well-formed functions and be aware of the computational weight of your functions. Malformed functions will cause the script to fail and subsequently the job to crash.
 
 ##### Self-Invoking Functions Example
-Self-invoking functions are useful when concatenating strings, or in places where you want the function output without redeclaring it. 
+Self-invoking functions are useful when concatenating strings, or in places where you want the function output without redeclaring it.
 
 ```json
     "parameters" : [
@@ -886,7 +900,7 @@ Self-invoking functions are useful when concatenating strings, or in places wher
         }
     ]
 ```
-The above function could be use in a string concatenation such as 
+The above function could be use in a string concatenation such as
 
 ```jsx
     alert("Miss, what's the mathematical operation required to compute the number" + NX.get("onePlusOne") + " ?"); // A typical second grade question.
@@ -926,7 +940,7 @@ This convoluted function would return a lovely invitation string to an event usi
     // Output:
 
     /*
-        This years' Avengers Gala is on the prestigious Smithsonian Museum of Natural History located at 10th St. & Constitution Ave. Our special guests Steve, Natasha,Tony, Wanda, Thor, Peter and Clint (whoever that is) are going to be present for the ceremony! 
+        This years' Avengers Gala is on the prestigious Smithsonian Museum of Natural History located at 10th St. & Constitution Ave. Our special guests Steve, Natasha,Tony, Wanda, Thor, Peter and Clint (whoever that is) are going to be present for the ceremony!
     */
 ```
 
@@ -1258,7 +1272,7 @@ If running WSL (`Windows Subsystem for Linux`) you will need to configure your p
 
 ### Linux Mapping
 
-You will need to pass in which drive letter `Linux` is mapped to in `Windows`. This is the `Drive Letter` in which you can access your Linux file system from Windows.  
+You will need to pass in which drive letter `Linux` is mapped to in `Windows`. This is the `Drive Letter` in which you can access your Linux file system from Windows.
 
 > ⚠ Note: Drive mapping is setup when configuring WSL
 You can do this through the CLI like so assuming Linux is mapped to `Z`.
@@ -1344,7 +1358,7 @@ nexrender-cli -f mywsljob.json -b "/mnt/d/Program Files/Adobe/Adobe After Effect
 
 ### WSL Workpath
 
-By default nexrender will use your Linux /tmp folder to render out the jobs. 
+By default nexrender will use your Linux /tmp folder to render out the jobs.
 
 We suggest changing this to a secondary drive as rendering can eat up disk space causing an issue where `WSL` does no release disk space back to `Windows`.
 
@@ -1596,36 +1610,6 @@ All tools include better help screen, and a lot of customization from command li
 
 </details>
 
-## Customers
-
-Technically, since the tool is free, customers should be called users.
-In any case this section describes a list of users or companies that are proud users of nexrender.
-If you've used nexrender, and you like it, please feel free to add yourself into the list.
-
-* [Noxcaos Music](https://www.youtube.com/channel/UC2D9WSUKnyTX8wWqNVITTAw)
-* [Two Bit Circus](https://twobitcircus.com)
-* [Flügerl](https://www.youtube.com/fluegerl)
-* [NewFlight](https://newflight.co)
-* [den frie vilje](https://denfrievilje.dk)
-* [DR (Danish National Broadcaster)](https://dr.dk)
-* [TV2 (Danish Broadcaster)](https://tv2.dk/)
-* you name goes here
-
-## Plans
-
-Features for next major release (`v2.0.0`):
-1. Ability to switch renderers for a job (`none`, `aerender`, `media-encoder`)
-2. Ability to push a job onto a server with ability to auto-split and render parts independently on the network
-  1. API for tracking/managing active workers in the network
-  2. Algo of splitting based on time & amount of workers
-  3. New job type (`partitioned`), which would be excluded from some general API responses
-  4. Mechanism of selecting a single node to be the "finisher", that would await and merge results of other jobs
-  5. Possible names: `@nexrender/action-merge-parent, @nexrender/action-merge-child`
-3. Extend current scripting capabilities with an advanced real-time communication with the internal environment via TCP connection
-4. Define a general abstract inteface for the actions, and a general package that would contain basic funcitonality like input/output arguments, etc.
-5. Re-design networking layer, as well as server database layer, to count in cases where the jobs can be huge json objects.
-6. Create automated footage detection and asset generator
-
 ## Contributors
 
 ### Code Contributors
@@ -1655,3 +1639,17 @@ Support this project with your organization. Your logo will show up here with a 
 <a href="https://opencollective.com/nexrender/organization/7/website"><img src="https://opencollective.com/nexrender/organization/7/avatar.svg"></a>
 <a href="https://opencollective.com/nexrender/organization/8/website"><img src="https://opencollective.com/nexrender/organization/8/avatar.svg"></a>
 <a href="https://opencollective.com/nexrender/organization/9/website"><img src="https://opencollective.com/nexrender/organization/9/avatar.svg"></a>
+
+## Need a quick solution or help?
+
+Nexrender began as a hobby project with the goal of simplifying video creation through automation. Since 2016, it has evolved into a full-fledged company with lots to offer.
+
+If you’re looking for an easy-to-use, reliable rendering solution with expert guidance every step of the way, consider trying our SaaS platform - [Nexrender Cloud](https://www.nexrender.com/products/cloud).
+
+In addition to our SaaS solution, we also build highly customized [rendering infrastructures](https://www.nexrender.com/products/custom) for customers who prefer on-premises solutions, have specific requirements, and a certain vision of how everything should be integrated across their systems.
+
+If you prefer a DIY approach, that’s fantastic! Our open-source project was created with that in mind, and we’re thrilled that so many people love and continue to use it. However, if you do have some questions along the way, feel free to reach out at [hello@nexrender.com](mailto:hello@nexrender.com) — we offer consultations to help you out.
+
+## Showcase your achievements
+
+And last but not least, we’re excited to see what you’ve created with Nexrender! We’d love to see any assets, videos, or images you can share. Just send them to [hello@nexrender.com](mailto:hello@nexrender.com). If your project is a good match for our audience, we’ll create a whole use case about it and feature it on all our social media!

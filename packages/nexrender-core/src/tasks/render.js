@@ -1,13 +1,21 @@
 const fs = require('fs')
 const path = require('path')
-const {spawn} = require('child_process')
+const {spawn, exec} = require('child_process')
 const {expandEnvironmentVariables, checkForWSL} = require('../helpers/path')
 
-const progressRegex = /([\d]{1,2}:[\d]{2}:[\d]{2}:[\d]{2})\s+(\(\d+[UL]?\))/gi;
-const durationRegex = /Duration:\s+([\d]{1,2}:[\d]{2}:[\d]{2}:[\d]{2})/gi;
-const startRegex = /Start:\s+([\d]{1,2}:[\d]{2}:[\d]{2}:[\d]{2})/gi;
-const nexrenderErrorRegex = /Error:\s+(nexrender:.*)$/gim;
-const errorRegex = /aerender Error:\s*(.*)$/gis;
+const translations = {
+    "en": {
+        "duration": "Duration",
+        "error"   : "Error",
+        "start"   : "Start"
+    },
+    "de": {
+        "duration": "Dauer",
+        "error"   : "Fehler",
+        "start"   : "Anfang"
+    }
+};
+
 
 const option = (params, name, ...values) => {
     if (values !== undefined) {
@@ -19,11 +27,55 @@ const seconds = (string) => string.split(':')
     .map((e, i) => (i < 3) ? +e * Math.pow(60, 2 - i) : +e * 10e-6)
     .reduce((acc, val) => acc + val);
 
+const crossPlatformKill = (instance) => {
+    if (process.platform === 'win32') {
+        // kill the aerender process and all its children
+        spawn('taskkill', ['/pid', instance.pid, '/f', '/t']);
+    } else {
+        instance.kill('SIGINT');
+    }
+}
+
+function killProcessByName(settings, processName) {
+    if (process.platform !== 'win32') {
+        return;
+    }
+
+    const command = `taskkill /IM ${processName} /F`;
+
+    exec(command, (error, stdout, stderr) => {
+        if (error) {
+            settings.logger.log(`Error killing process: ${error.message}`);
+            return;
+        }
+
+        if (stderr) {
+            settings.logger.log(`Error: ${stderr}`);
+            return;
+        }
+
+        settings.logger.log(`Process ${processName} killed successfully.`);
+        settings.logger.log(stdout);
+    });
+}
+
 /**
  * This task creates rendering process
  */
 module.exports = (job, settings) => {
     settings.logger.log(`[${job.uid}] rendering job...`);
+
+    if (!settings.language || !translations.hasOwnProperty(settings.language)) {
+        settings.language = "en";
+        settings.logger.log(`[${job.uid}] AE language not set, defaulting to "en"`);
+    }
+
+    const progressRegex = /([\d]{1,2}:[\d]{2}:[\d]{2}:[\d]{2})\s+(\(\d+[UL]?\))/gi;
+    const durationRegex = new RegExp(translations[settings.language].duration + ":\\s+([\\d]{1,2}:[\\d]{2}:[\\d]{2}:[\\d]{2})", "gi");
+    const startRegex = new RegExp(translations[settings.language].start + ":\\s+([\\d]{1,2}:[\\d]{2}:[\\d]{2}:[\\d]{2})", "gi");
+    const nexrenderErrorRegex = new RegExp(translations[settings.language].error + ":\\s+(nexrender:.*)$", "gim");
+    const errorRegex = new RegExp("aerender " + translations[settings.language].error + ":\\s*(.*)$", "gis");
+
 
     // create container for our parameters
     let params = [];
@@ -186,6 +238,8 @@ Estimated date of change to the new behavior: 2023-06-01.\n`);
         renderStopwatch = Date.now();
 
         let timeoutID = 0;
+        let updateTimeout = 0;
+        let updateTimeoutInterval = null;
 
         if (settings.debug) {
             settings.logger.log(`[${job.uid}] spawning aerender process: ${settings.binary} ${params.join(' ')}`);
@@ -201,6 +255,7 @@ Estimated date of change to the new behavior: 2023-06-01.\n`);
 
         instance.on('error', err => {
             clearTimeout(timeoutID);
+            clearInterval(updateTimeoutInterval);
             settings.trackSync('Job Render Failed', { job_id: job.uid, error: 'aerender_spawn_error' });
             return reject(new Error(`Error starting aerender process: ${err}`));
         });
@@ -208,20 +263,39 @@ Estimated date of change to the new behavior: 2023-06-01.\n`);
         instance.stdout.on('data', (data) => {
             output.push(parse(data.toString('utf8')));
             (settings.verbose && settings.logger.log(data.toString('utf8')));
+            updateTimeout = Date.now()
         });
 
         instance.stderr.on('data', (data) => {
             output.push(data.toString('utf8'));
             (settings.verbose && settings.logger.log(data.toString('utf8')));
+            updateTimeout = Date.now()
         });
+
+        updateTimeoutInterval = setInterval(() => {
+            if (projectStart === null) return;
+
+            const now = Date.now()
+            if (now - updateTimeout > settings.maxUpdateTimeout * 1000) {
+                clearInterval(updateTimeoutInterval);
+                clearTimeout(timeoutID);
+                settings.trackSync('Job Render Failed', { job_id: job.uid, error: 'aerender_no_update' });
+                reject(new Error(`No update from aerender for ${settings.maxUpdateTimeout} seconds`));
+                crossPlatformKill(instance)
+            }
+        }, 5000)
 
         if (settings.maxRenderTimeout && settings.maxRenderTimeout > 0) {
             const timeout = 1000 * settings.maxRenderTimeout;
             timeoutID = setTimeout(
                 () => {
+                    clearInterval(updateTimeoutInterval);
+                    clearTimeout(timeoutID);
                     settings.trackSync('Job Render Failed', { job_id: job.uid, error: 'aerender_timeout' });
                     reject(new Error(`Maximum rendering time exceeded`));
-                    instance.kill('SIGINT');
+                    crossPlatformKill(instance)
+                    if (settings.killAEFXOnRenderTimeout)
+                        killProcessByName('AfterFX.com')
                 },
                 timeout
             );
@@ -245,6 +319,7 @@ Estimated date of change to the new behavior: 2023-06-01.\n`);
                     error: 'aerender_exit_code',
                 });
 
+                clearInterval(updateTimeoutInterval);
                 clearTimeout(timeoutID);
                 return reject(new Error(outputStr || 'aerender.exe failed to render the output into the file due to an unknown reason'));
             }
@@ -256,13 +331,14 @@ Estimated date of change to the new behavior: 2023-06-01.\n`);
             fs.writeFileSync(logPath, outputStr);
 
             /* resolve job without checking if file exists, or its size for image sequences */
-            if (settings.skipRender || job.template.imageSequence || ['jpeg', 'jpg', 'png'].indexOf(outputFile) !== -1) {
+            if (settings.skipRender || job.template.imageSequence || ['jpeg', 'jpg', 'png', 'tif', 'tga'].indexOf(outputFile) !== -1) {
                 settings.track('Job Render Finished', {
                     job_id: job.uid, // anonymized internally
                     job_finish_reason: 'skipped_check',
                     job_render_time: renderTime,
                 })
 
+                clearInterval(updateTimeoutInterval);
                 clearTimeout(timeoutID);
                 return resolve(job)
             }
@@ -292,6 +368,7 @@ Estimated date of change to the new behavior: 2023-06-01.\n`);
 
                 settings.trackSync('Job Render Failed', { job_id: job.uid, error: 'aerender_output_not_found' });
                 clearTimeout(timeoutID);
+                clearInterval(updateTimeoutInterval);
                 return reject(new Error(`Couldn't find a result file: ${outputFile}`))
             }
 
@@ -310,6 +387,7 @@ Estimated date of change to the new behavior: 2023-06-01.\n`);
             });
 
             clearTimeout(timeoutID);
+            clearInterval(updateTimeoutInterval);
             resolve(job)
         });
 
@@ -318,4 +396,3 @@ Estimated date of change to the new behavior: 2023-06-01.\n`);
         }
     })
 };
-

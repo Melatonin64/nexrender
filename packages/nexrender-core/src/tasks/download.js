@@ -7,14 +7,27 @@ const uri2path = require('file-uri-to-path')
 const data2buf = require('data-uri-to-buffer')
 const mime     = require('mime-types')
 const {expandEnvironmentVariables} = require('../helpers/path')
+const { withTimeout } = require('../helpers/timeout');
+
+const NEXRENDER_DOWNLOAD_TIMEOUT = Number(process.env.NEXRENDER_DOWNLOAD_TIMEOUT) || 3 * 60 * 1000; // 3 minutes timeout by default
 
 const download = (job, settings, asset) => {
     if (asset.type == 'data') return Promise.resolve();
 
-    // eslint-disable-next-line
-    const uri = global.URL ? new URL(asset.src) : url.parse(asset.src)
-    const protocol = uri.protocol.replace(/:$/, '');
+    settings.logger.log(`[${job.uid}] > Downloading asset ${asset.src}...`);
+
+    let uri;
+    let protocol;
     let destName = '';
+
+    try {
+        // eslint-disable-next-line
+        uri = global.URL ? new URL(asset.src) : url.parse(asset.src)
+        protocol = uri.protocol.replace(/:$/, '');
+    } catch (error) {
+        settings.logger.log(`[download] error parsing asset ${asset.src}: ${error}`);
+        return Promise.reject(error);
+    }
 
     /* if asset doesnt have a file name, make up a random one */
     if (protocol === 'data' && !asset.layerName) {
@@ -25,9 +38,9 @@ const download = (job, settings, asset) => {
         /* ^ remove possible query search string params ^ */
         destName = decodeURI(destName) /* < remove/decode any special URI symbols within filename */
 
-        /* prevent same name file collisions */
-        if (fs.existsSync(path.join(job.workpath, destName))) {
-            destName = Math.random().toString(36).substring(2) + path.extname(asset.src);
+        /* prevent duplicate filename collisions during parallel fetch */
+        if (!asset.sequence) {
+            destName = Math.random().toString(36).substring(2) + '-' + destName;
         }
     }
 
@@ -85,39 +98,49 @@ const download = (job, settings, asset) => {
 
             /* TODO: maybe move to external package ?? */
             const src = asset.src
-            return fetch(src, asset.params)
-                .then(res => res.ok ? res : Promise.reject({reason: 'Initial error downloading file', meta: {src, error: res.error}}))
-                .then(res => {
-                    // Set a file extension based on content-type header if not already set
-                    if (!asset.extension) {
-                        const contentType = res.headers.get('content-type')
-                        const fileExt = mime.extension(contentType) || undefined
 
-                        asset.extension = fileExt
-                        const destHasExtension = path.extname(asset.dest) ? true : false
-                        // don't do this if asset.dest already has extension else it gives you example.jpg.jpg
-                        // like file in case of assets and aep/aepx file
-                        if (asset.extension && !destHasExtension) {
-                            asset.dest += `.${fileExt}`
-                        }
-                    }
-
-                    const stream = fs.createWriteStream(asset.dest)
-
-                    return new Promise((resolve, reject) => {
-                        const errorHandler = (error) => {
-                            reject(new Error({reason: 'Unable to download file', meta: {src, error}}))
-                        };
-
-                        res.body
-                            .on('error', errorHandler)
-                            .pipe(stream)
-
-                        stream
-                            .on('error', errorHandler)
-                            .on('finish', resolve)
+            try {
+                return withTimeout(
+                    fetch(src, {
+                        ...asset.params,
+                        timeout: NEXRENDER_DOWNLOAD_TIMEOUT
                     })
-                });
+                    .then(res => res.ok ? res : Promise.reject(new Error(`Unable to download file ${src}`)))
+                    .then(res => {
+                        // Set a file extension based on content-type header if not already set
+                        if (!asset.extension) {
+                            const contentType = res.headers.get('content-type')
+                            const fileExt = mime.extension(contentType) || undefined
+
+                            asset.extension = fileExt
+                            const destHasExtension = path.extname(asset.dest) ? true : false
+                            // don't do this if asset.dest already has extension else it gives you example.jpg.jpg
+                            // like file in case of assets and aep/aepx file
+                            if (asset.extension && !destHasExtension) {
+                                asset.dest += `.${fileExt}`
+                            }
+                        }
+
+                        const stream = fs.createWriteStream(asset.dest)
+
+                        return withTimeout(new Promise((resolve, reject) => {
+                            const errorHandler = (error) => {
+                                reject(new Error('Unable to download file ' + asset.src + ' due to ' + error))
+                            };
+
+                            res.body
+                                .on('error', errorHandler)
+                                .pipe(stream)
+
+                            stream
+                                .on('error', errorHandler)
+                                .on('finish', resolve)
+                        }), NEXRENDER_DOWNLOAD_TIMEOUT, 'Download timed out for asset ' + asset.src)
+                    }), NEXRENDER_DOWNLOAD_TIMEOUT, 'Download timed out for asset ' + asset.src)
+            } catch (error) {
+                settings.logger.log(`[download] error downloading asset ${asset.src}: ${error}`);
+                return Promise.reject(error);
+            }
 
         case 'file':
             const filepath = uri2path(expandEnvironmentVariables(asset.src))
@@ -166,10 +189,15 @@ const download = (job, settings, asset) => {
 module.exports = function(job, settings) {
     settings.logger.log(`[${job.uid}] downloading assets...`)
 
-    const promises = [].concat(
-        download(job, settings, job.template),
-        job.assets.map(asset => download(job, settings, asset))
-    )
+    try {
+        const promises = [].concat(
+            download(job, settings, job.template),
+            job.assets.map(asset => download(job, settings, asset))
+        )
 
-    return Promise.all(promises).then(() => job);
+        return Promise.all(promises).then(() => job);
+    } catch (error) {
+        settings.logger.log(`[download] error downloading assets: ${error}`);
+        return Promise.reject(error);
+    }
 }
