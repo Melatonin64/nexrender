@@ -9,7 +9,7 @@ const getBinary = (job, settings) => {
     return new Promise((resolve, reject) => {
         const {version} = pkg['ffmpeg-static']
         const filename = `ffmpeg-${version}${process.platform == 'win32' ? '.exe' : ''}`
-        const fileurl = `https://github.com/eugeneware/ffmpeg-static/releases/download/${version}/${process.platform}-x64`
+        const fileurl = `https://github.com/eugeneware/ffmpeg-static/releases/download/${version}/${process.platform}-${process.arch}`
         const output = path.join(settings.workpath, filename)
 
         if (fs.existsSync(process.env.NEXRENDER_FFMPEG)) {
