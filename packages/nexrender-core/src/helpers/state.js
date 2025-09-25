@@ -3,10 +3,6 @@ module.exports = (job, settings, fn, fnName) => {
         return Promise.resolve(job);
     }
 
-    if (settings && settings.abortSignal && settings.abortSignal.aborted) {
-        return Promise.reject(new Error('Aborted'));
-    }
-
     job.state = `render:${fnName}`;
 
     if (job.onChange) {
