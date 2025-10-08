@@ -105,7 +105,7 @@ const init = (settings) => {
 
         __initialized: true,
     }, settings, {
-        binary: binaryUser || binaryAuto,
+        binary: binaryUser || binaryAuto || '',
     })
 
     // try to detect version
