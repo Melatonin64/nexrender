@@ -64,8 +64,9 @@ const init = (settings) => {
 
     const binaryAuto = autofind(settings);
     const binaryUser = settings.binary && fs.existsSync(settings.binary) ? settings.binary : null;
+    const aeSkipped = settings.skipSteps && settings.skipSteps.includes('dorender');
 
-    if (!binaryUser && !binaryAuto) {
+    if (!binaryUser && !binaryAuto && !aeSkipped) {
         settings.trackSync('Init Failed', { error: 'no_aerender_binary_found' })
         throw new Error('you should provide a proper path to After Effects\' "aerender" binary')
     }
