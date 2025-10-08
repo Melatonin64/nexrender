@@ -127,7 +127,9 @@ const init = (settings) => {
 
     // attempt to patch the default
     // Scripts/commandLineRenderer.jsx
-    patch(settings);
+    if (!aeSkipped) {
+        patch(settings);
+    }
 
     settings.trackSync('Init Succeeded', {
         ae_binary_strategy: settings.aeBinaryStrategy,
