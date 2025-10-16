@@ -62,9 +62,9 @@ const init = (settings) => {
     // check for WSL
     settings.wsl = isWsl
 
-    const binaryAuto = autofind(settings);
-    const binaryUser = settings.binary && fs.existsSync(settings.binary) ? settings.binary : null;
     const aeSkipped = settings.skipSteps && settings.skipSteps.includes('dorender');
+    const binaryAuto = aeSkipped ? null : autofind(settings);
+    const binaryUser = settings.binary && fs.existsSync(settings.binary) ? settings.binary : null;
 
     if (!binaryUser && !binaryAuto && !aeSkipped) {
         settings.trackSync('Init Failed', { error: 'no_aerender_binary_found' })
